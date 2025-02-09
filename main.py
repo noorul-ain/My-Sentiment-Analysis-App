@@ -1,53 +1,59 @@
 import streamlit as st
 from textblob import TextBlob
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 import nltk
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
-# Ensure nltk punkt tokenizer is available
-nltk.download('punkt')
+nltk.download("punkt")
 
-# Streamlit App Configuration
-st.title("😊 Text Sentiment Analysis App")
-st.write("Analyze the sentiment of your text input (positive, neutral, or negative) and visualize the results!")
+# Streamlit app setup
+st.title("Sentiment Analysis")
+st.write("Generate a word cloud to visualize the sentiment of words in your input text.")
 
-# User Input
-user_input = st.text_area("Enter your text below:", "")
+# User input
+user_input = st.text_area("Enter your text:", placeholder="Type your text here...")
 
-# Add a Submit Button
-if st.button("Submit"):
-    if user_input.strip():
-        # Perform Sentiment Analysis
-        blob = TextBlob(user_input)
-        sentences = blob.sentences
-        polarities = [sentence.sentiment.polarity for sentence in sentences]
-        
-        # Display Sentiment Result
-        st.subheader("Sentiment Analysis Result")
-        if polarities:
-            avg_sentiment = sum(polarities) / len(polarities)
-            sentiment_label = "Positive 😊" if avg_sentiment > 0 else "Negative 😞" if avg_sentiment < 0 else "Neutral 😐"
-            st.write(f"Overall Sentiment: **{sentiment_label}**")
-            st.write(f"Average Polarity Score: {avg_sentiment:.2f}")
+# Function for word-level sentiment analysis
+def analyze_words(text):
+    tokens = nltk.word_tokenize(text)
+    word_sentiments = {"Positive": [], "Negative": [], "Neutral": []}
+    
+    for word in tokens:
+        blob = TextBlob(word)
+        polarity = blob.sentiment.polarity
+        if polarity > 0:
+            word_sentiments["Positive"].append(word)
+        elif polarity < 0:
+            word_sentiments["Negative"].append(word)
         else:
-            st.write("No sentences detected for sentiment analysis.")
+            word_sentiments["Neutral"].append(word)
+    
+    return word_sentiments
 
-        # Bar Chart for Polarity Scores
-        st.subheader("📊 Polarity Score Bar Chart")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.bar(range(1, len(polarities) + 1), polarities, color='cornflowerblue')
-        ax.set_title("Polarity Score for Each Sentence")
-        ax.set_xlabel("Sentence Number")
-        ax.set_ylabel("Polarity Score")
-        ax.axhline(0, color='gray', linestyle='--', linewidth=0.7)  # Add a horizontal line at 0
-        st.pyplot(fig)
+# Analyze button
+if st.button("Analyze"):
+    if user_input.strip():
+        word_sentiments = analyze_words(user_input)
 
-        # Word Cloud Visualization
-        st.subheader("📊 Word Cloud Visualization")
-        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(user_input)
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.imshow(wordcloud, interpolation='bilinear')
-        ax.axis("off")
+        # Display the results
+        st.subheader("Word Sentiment Analysis")
+        for sentiment, words in word_sentiments.items():
+            st.write(f"**{sentiment} Words:** {' '.join(words) if words else 'None'}")
+        
+        # Generate word clouds for each sentiment
+        fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+        colormaps = {"Positive": "Greens", "Negative": "Reds", "Neutral": "gray"}
+
+        for i, (sentiment, words) in enumerate(word_sentiments.items()):
+            if words:  # Only generate a word cloud if there are words for the sentiment
+                wordcloud = WordCloud(width=400, height=400, background_color="white", colormap=colormaps[sentiment]).generate(" ".join(words))
+                axs[i].imshow(wordcloud, interpolation="bilinear")
+                axs[i].set_title(f"{sentiment} Words", fontsize=16)
+                axs[i].axis("off")
+            else:
+                axs[i].set_title(f"No {sentiment} Words", fontsize=16)
+                axs[i].axis("off")
+
         st.pyplot(fig)
     else:
-        st.error("Please enter some text before submitting.")
+        st.warning("Please enter some text to analyze.")
