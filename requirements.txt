@@ -1,0 +1,9 @@
+streamlit
+textblob
+matplotlib
+wordcloud
+nltk
+
+
+
+
